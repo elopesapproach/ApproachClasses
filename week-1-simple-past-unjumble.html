@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simple Past Unjumble</title>
+<style>
+  :root{
+    --navy-deep: #10192e;
+    --navy: #1b2a4a;
+    --navy-soft: #29406e;
+    --gold: #c9a24b;
+    --gold-light: #e7cd8c;
+    --warm-white: #faf6ec;
+    --ink: #22283a;
+    --teal: #2f6f6a;
+    --amber: #c97b3d;
+    --correct: #3f8f5f;
+    --incorrect: #b9503f;
+    --font-display: Cambria, Georgia, 'Times New Roman', serif;
+    --font-body: Calibri, 'Segoe UI', Tahoma, Arial, sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background: var(--warm-white);
+    font-family: var(--font-body);
+    color: var(--ink);
+  }
+
+  body{
+    display:flex;
+    justify-content:center;
+    padding: 28px 16px 60px;
+  }
+
+  .app{
+    width:100%;
+    max-width: 720px;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom: 22px;
+  }
+
+  header .eyebrow{
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-size: 12px;
+    color: var(--amber);
+    font-weight: 700;
+  }
+
+  header h1{
+    font-family: var(--font-display);
+    color: var(--navy-deep);
+    font-size: 34px;
+    margin: 6px 0 4px;
+  }
+
+  header p.sub{
+    color: var(--navy-soft);
+    font-size: 15px;
+    margin: 0;
+  }
+
+  /* progress rail */
+  .progress-rail{
+    display:flex;
+    justify-content:center;
+    gap:7px;
+    margin: 20px 0 26px;
+    flex-wrap: wrap;
+  }
+  .dot{
+    width:10px; height:10px;
+    border-radius:50%;
+    border: 2px solid var(--navy-soft);
+    background: transparent;
+    transition: all .25s ease;
+  }
+  .dot.done{
+    background: var(--gold);
+    border-color: var(--gold);
+  }
+  .dot.current{
+    border-color: var(--gold);
+    transform: scale(1.3);
+  }
+
+  /* card */
+  .card{
+    position: relative;
+    background: #fff;
+    border-radius: 4px;
+    padding: 34px 26px 28px;
+    margin-bottom: 22px;
+    box-shadow: 0 10px 30px rgba(16,25,46,0.08);
+  }
+
+  .corner{
+    position:absolute;
+    width:22px; height:22px;
+    border: 3px solid var(--gold);
+  }
+  .corner.tl{ top:-3px; left:-3px; border-right:none; border-bottom:none; }
+  .corner.tr{ top:-3px; right:-3px; border-left:none; border-bottom:none; }
+  .corner.bl{ bottom:-3px; left:-3px; border-right:none; border-top:none; }
+  .corner.br{ bottom:-3px; right:-3px; border-left:none; border-top:none; }
+
+  .category-tag{
+    display:inline-block;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 3px;
+    margin-bottom: 18px;
+  }
+  .category-tag.regular{ background: rgba(47,111,106,0.12); color: var(--teal); }
+  .category-tag.irregular{ background: rgba(201,124,61,0.14); color: var(--amber); }
+  .category-tag.negative{ background: rgba(185,80,63,0.12); color: var(--incorrect); }
+  .category-tag.question{ background: rgba(27,42,74,0.10); color: var(--navy); }
+
+  .instructions{
+    font-size: 13.5px;
+    color: #6b7280;
+    margin: 0 0 18px;
+  }
+
+  .tiles{
+    display:flex;
+    flex-wrap:wrap;
+    gap: 10px;
+    min-height: 62px;
+    padding: 14px;
+    background: var(--warm-white);
+    border: 1.5px dashed #d8cfb8;
+    border-radius: 6px;
+    touch-action: none;
+  }
+
+  .tile{
+    font-family: var(--font-display);
+    font-size: 17px;
+    background: var(--navy);
+    color: var(--warm-white);
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: grab;
+    user-select: none;
+    box-shadow: 0 3px 0 rgba(16,25,46,0.35);
+    transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+    touch-action: none;
+    position: relative;
+  }
+  .tile.dragging{
+    opacity: 0.35;
+  }
+  .tile.floating{
+    position: fixed;
+    z-index: 999;
+    pointer-events: none;
+    box-shadow: 0 8px 18px rgba(16,25,46,0.35);
+    transform: scale(1.06) rotate(-1.5deg);
+  }
+  .tile.locked{
+    cursor: default;
+  }
+  .tile.correct-flash{ background: var(--correct); }
+  .tile.hint-flash{ background: var(--gold); color: var(--navy-deep); }
+
+  .card.shake{
+    animation: shake .4s ease;
+  }
+  @keyframes shake{
+    0%,100%{ transform: translateX(0); }
+    20%{ transform: translateX(-8px); }
+    40%{ transform: translateX(8px); }
+    60%{ transform: translateX(-6px); }
+    80%{ transform: translateX(6px); }
+  }
+
+  .feedback{
+    min-height: 22px;
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 14px;
+    text-align:center;
+  }
+  .feedback.correct{ color: var(--correct); }
+  .feedback.incorrect{ color: var(--incorrect); }
+
+  .controls{
+    display:flex;
+    justify-content:center;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+
+  button{
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 10px 18px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    transition: transform .1s ease, background .15s ease;
+  }
+  button:active{ transform: scale(0.96); }
+
+  .btn-primary{ background: var(--navy-deep); color: var(--warm-white); }
+  .btn-primary:hover{ background: var(--navy); }
+  .btn-secondary{ background: transparent; color: var(--navy-soft); border: 1.5px solid var(--navy-soft); }
+  .btn-secondary:hover{ background: rgba(27,42,74,0.06); }
+  .btn-gold{ background: var(--gold); color: var(--navy-deep); }
+  .btn-gold:hover{ background: var(--gold-light); }
+  button:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .scoreboard{
+    display:flex;
+    justify-content:center;
+    gap: 26px;
+    font-size: 13px;
+    color: var(--navy-soft);
+    margin-top: 6px;
+    letter-spacing: 0.4px;
+  }
+  .scoreboard b{ color: var(--navy-deep); font-family: var(--font-display); font-size: 15px; }
+
+  /* end screen */
+  .end-screen{
+    display:none;
+    text-align:center;
+    background: var(--navy-deep);
+    color: var(--warm-white);
+    border-radius: 6px;
+    padding: 46px 28px;
+    position:relative;
+  }
+  .end-screen .corner{ border-color: var(--gold); }
+  .end-screen.show{ display:block; }
+  .end-screen h2{
+    font-family: var(--font-display);
+    font-size: 30px;
+    margin: 0 0 8px;
+    color: var(--gold-light);
+  }
+  .end-screen .big-score{
+    font-family: var(--font-display);
+    font-size: 52px;
+    color: var(--warm-white);
+    margin: 14px 0;
+  }
+  .end-screen p{ color: #cdd6e6; font-size: 14px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="eyebrow">ApproachISA · Grammar Practice</div>
+    <h1>Simple Past Unjumble</h1>
+    <p class="sub">Drag the tiles into the correct word order.</p>
+  </header>
+
+  <div class="progress-rail" id="progressRail"></div>
+
+  <div class="card" id="puzzleCard">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <span class="category-tag" id="categoryTag"></span>
+    <p class="instructions">Drag the tiles below to rebuild the sentence, then press Check.</p>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="controls">
+      <button class="btn-secondary" id="hintBtn">Hint</button>
+      <button class="btn-secondary" id="resetBtn">Reshuffle</button>
+      <button class="btn-primary" id="checkBtn">Check</button>
+      <button class="btn-gold" id="nextBtn" style="display:none;">Next Sentence →</button>
+    </div>
+
+    <div class="scoreboard">
+      <span>Sentence <b id="sentenceNum">1</b>/<span id="sentenceTotal"></span></span>
+      <span>Score <b id="scoreVal">0</b></span>
+      <span>Hints used <b id="hintVal">0</b></span>
+    </div>
+  </div>
+
+  <div class="end-screen" id="endScreen">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+    <div class="eyebrow" style="color:var(--gold-light)">Well Done</div>
+    <h2>Practice Complete</h2>
+    <div class="big-score" id="finalScore">0/10</div>
+    <p id="finalHints">Hints used: 0</p>
+    <button class="btn-gold" id="playAgainBtn" style="margin-top:14px;">Play Again</button>
+  </div>
+</div>
+
+<script>
+const SENTENCES = [
+  { text: "She walked to school yesterday.", category: "regular", label: "Regular Verb" },
+  { text: "They watched a movie last night.", category: "regular", label: "Regular Verb" },
+  { text: "We studied English for two hours.", category: "regular", label: "Regular Verb" },
+  { text: "He wrote a letter to his friend.", category: "irregular", label: "Irregular Verb" },
+  { text: "We took the bus to the airport.", category: "irregular", label: "Irregular Verb" },
+  { text: "The children ran in the park.", category: "irregular", label: "Irregular Verb" },
+  { text: "I bought a new phone yesterday.", category: "irregular", label: "Irregular Verb" },
+  { text: "She didn't go to the party.", category: "negative", label: "Negative" },
+  { text: "We didn't finish our homework.", category: "negative", label: "Negative" },
+  { text: "Did you watch the game last night?", category: "question", label: "Question" }
+];
+
+let current = 0;
+let score = 0;
+let hints = 0;
+let order = []; // current DOM order of words (strings)
+let target = []; // correct order of words
+
+const tilesEl = document.getElementById('tiles');
+const feedbackEl = document.getElementById('feedback');
+const checkBtn = document.getElementById('checkBtn');
+const resetBtn = document.getElementById('resetBtn');
+const hintBtn = document.getElementById('hintBtn');
+const nextBtn = document.getElementById('nextBtn');
+const categoryTag = document.getElementById('categoryTag');
+const sentenceNum = document.getElementById('sentenceNum');
+const sentenceTotal = document.getElementById('sentenceTotal');
+const scoreVal = document.getElementById('scoreVal');
+const hintVal = document.getElementById('hintVal');
+const puzzleCard = document.getElementById('puzzleCard');
+const progressRail = document.getElementById('progressRail');
+const endScreen = document.getElementById('endScreen');
+const finalScore = document.getElementById('finalScore');
+const finalHints = document.getElementById('finalHints');
+
+sentenceTotal.textContent = SENTENCES.length;
+
+function buildProgressRail(){
+  progressRail.innerHTML = '';
+  SENTENCES.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.id = 'dot-' + i;
+    progressRail.appendChild(d);
+  });
+}
+
+function updateProgressRail(){
+  SENTENCES.forEach((_, i) => {
+    const d = document.getElementById('dot-' + i);
+    d.classList.remove('done', 'current');
+    if (i < current) d.classList.add('done');
+    else if (i === current) d.classList.add('current');
+  });
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function loadSentence(index){
+  const s = SENTENCES[index];
+  target = s.text.split(' ');
+  categoryTag.textContent = s.label;
+  categoryTag.className = 'category-tag ' + s.category;
+
+  let shuffled = shuffle(target);
+  // ensure it's not already in correct order (when more than 1 word)
+  let tries = 0;
+  while (target.length > 1 && shuffled.join(' ') === target.join(' ') && tries < 10){
+    shuffled = shuffle(target);
+    tries++;
+  }
+  order = shuffled;
+
+  sentenceNum.textContent = index + 1;
+  feedbackEl.textContent = '';
+  feedbackEl.className = 'feedback';
+  nextBtn.style.display = 'none';
+  checkBtn.style.display = '';
+  hintBtn.disabled = false;
+  checkBtn.disabled = false;
+  resetBtn.disabled = false;
+
+  renderTiles();
+  updateProgressRail();
+}
+
+function renderTiles(){
+  tilesEl.innerHTML = '';
+  order.forEach((word) => {
+    const t = document.createElement('div');
+    t.className = 'tile';
+    t.textContent = word;
+    t.dataset.word = word;
+    attachDrag(t);
+    tilesEl.appendChild(t);
+  });
+}
+
+// ---- Drag and drop (pointer events, mouse + touch) ----
+function attachDrag(tile){
+  let startX, startY, offsetX, offsetY, dragging = false;
+
+  tile.addEventListener('pointerdown', (e) => {
+    if (tile.classList.contains('locked')) return;
+    e.preventDefault();
+    dragging = true;
+    tile.setPointerCapture(e.pointerId);
+    const rect = tile.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    startX = rect.left;
+    startY = rect.top;
+
+    tile.classList.add('floating');
+    tile.style.width = rect.width + 'px';
+    tile.style.left = rect.left + 'px';
+    tile.style.top = rect.top + 'px';
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'tile';
+    placeholder.style.visibility = 'hidden';
+    placeholder.style.width = rect.width + 'px';
+    placeholder.textContent = tile.textContent;
+    placeholder.dataset.placeholder = 'true';
+    tile.parentNode.insertBefore(placeholder, tile.nextSibling);
+
+    function onMove(ev){
+      if (!dragging) return;
+      const x = ev.clientX - offsetX;
+      const y = ev.clientY - offsetY;
+      tile.style.left = x + 'px';
+      tile.style.top = y + 'px';
+
+      const siblings = [...tilesEl.querySelectorAll('.tile:not(.floating)')];
+      let closest = null;
+      let closestDist = Infinity;
+      const cx = ev.clientX;
+      siblings.forEach(sib => {
+        const r = sib.getBoundingClientRect();
+        const midX = r.left + r.width / 2;
+        const dist = Math.abs(cx - midX);
+        if (dist < closestDist){
+          closestDist = dist;
+          closest = sib;
+        }
+      });
+      if (closest && closest !== placeholder){
+        const r = closest.getBoundingClientRect();
+        if (cx < r.left + r.width / 2){
+          tilesEl.insertBefore(placeholder, closest);
+        } else {
+          tilesEl.insertBefore(placeholder, closest.nextSibling);
+        }
+      }
+    }
+
+    function onUp(ev){
+      if (!dragging) return;
+      dragging = false;
+      tile.releasePointerCapture(ev.pointerId);
+      tile.classList.remove('floating');
+      tile.style.position = '';
+      tile.style.left = '';
+      tile.style.top = '';
+      tile.style.width = '';
+
+      tilesEl.insertBefore(tile, placeholder);
+      placeholder.remove();
+
+      order = [...tilesEl.querySelectorAll('.tile')].map(t => t.dataset.word);
+
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+    }
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+}
+
+// ---- Check answer ----
+checkBtn.addEventListener('click', () => {
+  const currentOrder = [...tilesEl.querySelectorAll('.tile')].map(t => t.dataset.word);
+  const isCorrect = currentOrder.join(' ') === target.join(' ');
+
+  if (isCorrect){
+    feedbackEl.textContent = 'Correct! Nice work.';
+    feedbackEl.className = 'feedback correct';
+    tilesEl.querySelectorAll('.tile').forEach(t => {
+      t.classList.add('correct-flash', 'locked');
+    });
+    checkBtn.style.display = 'none';
+    hintBtn.disabled = true;
+    resetBtn.disabled = true;
+    score++;
+    scoreVal.textContent = score;
+
+    if (current === SENTENCES.length - 1){
+      nextBtn.textContent = 'See Results →';
+    } else {
+      nextBtn.textContent = 'Next Sentence →';
+    }
+    nextBtn.style.display = '';
+  } else {
+    feedbackEl.textContent = 'Not quite — check the word order and try again.';
+    feedbackEl.className = 'feedback incorrect';
+    puzzleCard.classList.remove('shake');
+    void puzzleCard.offsetWidth;
+    puzzleCard.classList.add('shake');
+  }
+});
+
+// ---- Reshuffle ----
+resetBtn.addEventListener('click', () => {
+  order = shuffle(target);
+  feedbackEl.textContent = '';
+  feedbackEl.className = 'feedback';
+  renderTiles();
+});
+
+// ---- Hint ----
+hintBtn.addEventListener('click', () => {
+  const tiles = [...tilesEl.querySelectorAll('.tile')];
+  const currentOrder = tiles.map(t => t.dataset.word);
+
+  let firstWrong = -1;
+  for (let i = 0; i < target.length; i++){
+    if (currentOrder[i] !== target[i]){ firstWrong = i; break; }
+  }
+  if (firstWrong === -1) return;
+
+  const correctWord = target[firstWrong];
+  const correctTileIndex = currentOrder.indexOf(correctWord, firstWrong);
+  if (correctTileIndex === -1) return;
+
+  const tileToMove = tiles[correctTileIndex];
+  const refTile = tiles[firstWrong];
+  tilesEl.insertBefore(tileToMove, refTile);
+
+  tileToMove.classList.add('hint-flash');
+  setTimeout(() => tileToMove.classList.remove('hint-flash'), 500);
+
+  order = [...tilesEl.querySelectorAll('.tile')].map(t => t.dataset.word);
+  hints++;
+  hintVal.textContent = hints;
+});
+
+// ---- Next ----
+nextBtn.addEventListener('click', () => {
+  if (current === SENTENCES.length - 1){
+    showEndScreen();
+  } else {
+    current++;
+    loadSentence(current);
+  }
+});
+
+function showEndScreen(){
+  puzzleCard.style.display = 'none';
+  document.getElementById('progressRail').style.display = 'none';
+  endScreen.classList.add('show');
+  finalScore.textContent = score + '/' + SENTENCES.length;
+  finalHints.textContent = 'Hints used: ' + hints;
+}
+
+document.getElementById('playAgainBtn').addEventListener('click', () => {
+  current = 0;
+  score = 0;
+  hints = 0;
+  scoreVal.textContent = 0;
+  hintVal.textContent = 0;
+  endScreen.classList.remove('show');
+  puzzleCard.style.display = '';
+  document.getElementById('progressRail').style.display = '';
+  loadSentence(0);
+});
+
+// ---- Init ----
+buildProgressRail();
+loadSentence(0);
+</script>
+</body>
+</html>
